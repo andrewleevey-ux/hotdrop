@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trash2, Copy, Image as ImageIcon, X, Loader2, Clipboard, Flame } from 'lucide-react';
+import { Trash2, Copy, Image as ImageIcon, X, Loader2, Clipboard, Flame, LogIn } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
+
+// I have added your Render URL here:
+const SOCKET_URL = 'https://hotdrop-backend.onrender.com';
 
 type ClipboardItem = {
   id: string;
@@ -11,11 +15,62 @@ type ClipboardItem = {
 };
 
 export default function Home() {
-  const [roomCode] = useState('HOT-77'); // We will make this dynamic in the next step
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [roomCode, setRoomCode] = useState('');
+  const [isEditingRoom, setIsEditingRoom] = useState(false);
   const [items, setItems] = useState<ClipboardItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting, connected, disconnected
 
+  // 1. Initialize Socket & Room on Load
+  useEffect(() => {
+    // Generate a random room code if one doesn't exist
+    const initialRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
+    setRoomCode(initialRoom);
+
+    const newSocket = io(SOCKET_URL);
+    setSocket(newSocket);
+
+    newSocket.on('connect', () => {
+      setConnectionStatus('connected');
+      console.log('Connected to Switchboard');
+      newSocket.emit('join-room', initialRoom);
+    });
+
+    newSocket.on('init-history', (history: ClipboardItem[]) => {
+      setItems(history);
+    });
+
+    newSocket.on('new-item', (item: ClipboardItem) => {
+      setItems(prev => [item, ...prev].slice(0, 5));
+    });
+
+    newSocket.on('sync-list', (updatedList: ClipboardItem[]) => {
+      setItems(updatedList);
+    });
+
+    newSocket.on('disconnect', () => setConnectionStatus('disconnected'));
+
+    return () => {
+      newSocket.close();
+    };
+  }, []);
+
+  // 2. Handle Changing Rooms (Joining)
+  const joinRoom = (code: string) => {
+    const cleanCode = code.toUpperCase().trim();
+    if (cleanCode.length > 0 && socket) {
+      setRoomCode(cleanCode);
+      socket.emit('join-room', cleanCode);
+      setIsEditingRoom(false);
+      setItems([]); // Clear local view while loading new room
+    }
+  };
+
+  // 3. Handle Pasting / Uploading
   const handlePaste = async (e: React.ClipboardEvent) => {
+    if (!socket || connectionStatus !== 'connected') return;
+
     const text = e.clipboardData.getData('text');
     const files = e.clipboardData.files;
 
@@ -23,8 +78,8 @@ export default function Home() {
       setIsUploading(true);
       const file = files[0];
 
-      if (file.size > 15 * 1024 * 1024) {
-        alert("File too large! Max 15MB for now.");
+      if (file.size > 5 * 1024 * 1024) { 
+        alert("File too large! Please keep it under 5MB.");
         setIsUploading(false);
         return;
       }
@@ -37,7 +92,9 @@ export default function Home() {
           content: event.target?.result as string,
           timestamp: Date.now(),
         };
-        setItems(prev => [newItem, ...prev].slice(0, 5));
+        // Optimistic UI update
+        // setItems(prev => [newItem, ...prev].slice(0, 5));
+        socket.emit('upload-item', { roomCode, item: newItem });
         setIsUploading(false);
       };
       reader.readAsDataURL(file);
@@ -48,12 +105,20 @@ export default function Home() {
         content: text,
         timestamp: Date.now(),
       };
-      setItems(prev => [newItem, ...prev].slice(0, 5));
+      // Optimistic UI update
+      // setItems(prev => [newItem, ...prev].slice(0, 5));
+      socket.emit('upload-item', { roomCode, item: newItem });
     }
   };
 
   const deleteItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
+    if (socket) socket.emit('delete-item', { roomCode, itemId: id });
+  };
+
+  const clearAll = () => {
+    if (socket && confirm('Clear history for everyone in this room?')) {
+      socket.emit('clear-all', roomCode);
+    }
   };
 
   return (
@@ -66,22 +131,61 @@ export default function Home() {
 
       <div className="relative z-10 max-w-2xl mx-auto px-6 py-12">
         {/* Header */}
-        <header className="flex items-center justify-between mb-12 bg-white/50 backdrop-blur-md p-4 rounded-2xl border border-orange-100 shadow-sm">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 bg-white/60 backdrop-blur-md p-4 rounded-3xl border border-orange-100 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
-              <Flame size={22} className="text-white fill-current" />
+            <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200">
+              <Flame size={24} className="text-white fill-current" />
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tight text-slate-800 uppercase">Hotdrop</h1>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Room: {roomCode}</span>
+                <span className={`w-2 h-2 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {connectionStatus === 'connected' ? 'Online' : 'Reconnecting...'}
+                </span>
               </div>
             </div>
           </div>
+
+          {/* Room Switcher */}
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-1.5 pl-4 shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Room:</span>
+            {isEditingRoom ? (
+              <form 
+                onSubmit={(e) => { e.preventDefault(); joinRoom(roomCode); }}
+                className="flex items-center"
+              >
+                <input 
+                  autoFocus
+                  type="text" 
+                  value={roomCode}
+                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                  onBlur={() => joinRoom(roomCode)}
+                  className="w-20 font-mono font-bold text-slate-800 bg-transparent outline-none uppercase placeholder-slate-300"
+                  maxLength={6}
+                />
+              </form>
+            ) : (
+              <button 
+                onClick={() => setIsEditingRoom(true)}
+                className="font-mono font-bold text-slate-800 hover:text-orange-500 transition-colors uppercase"
+              >
+                {roomCode}
+              </button>
+            )}
+            <button 
+               onClick={() => setIsEditingRoom(!isEditingRoom)}
+               className="p-2 bg-slate-50 hover:bg-orange-50 text-slate-400 hover:text-orange-500 rounded-lg transition-colors"
+               title="Join a different room"
+            >
+              <LogIn size={16} />
+            </button>
+          </div>
+
           <button 
-            onClick={() => setItems([])}
-            className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-white rounded-xl transition-all border border-transparent hover:border-red-100"
+            onClick={clearAll}
+            className="hidden md:flex p-2.5 text-slate-400 hover:text-red-500 hover:bg-white rounded-xl transition-all border border-transparent hover:border-red-100"
+            title="Clear All"
           >
             <Trash2 size={20} />
           </button>
@@ -90,11 +194,11 @@ export default function Home() {
         {/* Drop Zone */}
         <div className="group relative mb-12">
           <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-[2.5rem] blur opacity-10 group-hover:opacity-25 transition duration-500"></div>
-          <div className="relative bg-white border-2 border-dashed border-orange-100 rounded-[2.2rem] p-16 flex flex-col items-center justify-center transition-all shadow-sm group-hover:border-orange-300">
+          <div className="relative bg-white border-2 border-dashed border-orange-100 rounded-[2.2rem] p-12 md:p-16 flex flex-col items-center justify-center transition-all shadow-sm group-hover:border-orange-300">
             {isUploading ? (
               <div className="py-4 flex flex-col items-center">
                 <Loader2 className="animate-spin text-orange-500 mb-4" size={32} />
-                <p className="text-sm font-bold text-orange-600 uppercase tracking-tighter">Uploading to Cloud...</p>
+                <p className="text-sm font-bold text-orange-600 uppercase tracking-tighter">Syncing to Cloud...</p>
               </div>
             ) : (
               <>
@@ -102,7 +206,9 @@ export default function Home() {
                   <Clipboard size={28} />
                 </div>
                 <h2 className="text-xl font-bold text-slate-800">Paste or Drop</h2>
-                <p className="text-sm text-slate-400 font-medium">Synced across all your devices instantly</p>
+                <p className="text-sm text-slate-400 font-medium text-center mt-2">
+                  Items sync instantly to Room <span className="text-orange-500 font-mono font-bold">{roomCode}</span>
+                </p>
               </>
             )}
           </div>
