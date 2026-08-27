@@ -21,6 +21,7 @@ export default function Home() {
   const [items, setItems] = useState<ClipboardItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting, connected, disconnected
+  const [isDragging, setIsDragging] = useState(false);
 
   // 1. Initialize Socket & Room on Load
   useEffect(() => {
@@ -68,6 +69,34 @@ export default function Home() {
   };
 
   // 3. Handle Pasting / Uploading
+  const uploadFile = (file: File) => {
+    if (!socket || connectionStatus !== 'connected') return;
+
+    if (!file.type.startsWith('image/')) {
+      alert("Only images are supported for drop/upload right now.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File too large! Please keep it under 5MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const newItem: ClipboardItem = {
+        id: Math.random().toString(36).substring(2, 9),
+        type: 'image',
+        content: event.target?.result as string,
+        timestamp: Date.now(),
+      };
+      socket.emit('upload-item', { roomCode, item: newItem });
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handlePaste = async (e: React.ClipboardEvent) => {
     if (!socket || connectionStatus !== 'connected') return;
 
@@ -75,29 +104,7 @@ export default function Home() {
     const files = e.clipboardData.files;
 
     if (files && files.length > 0) {
-      setIsUploading(true);
-      const file = files[0];
-
-      if (file.size > 5 * 1024 * 1024) { 
-        alert("File too large! Please keep it under 5MB.");
-        setIsUploading(false);
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newItem: ClipboardItem = {
-          id: Math.random().toString(36).substring(2, 9),
-          type: 'image',
-          content: event.target?.result as string,
-          timestamp: Date.now(),
-        };
-        // Optimistic UI update
-        // setItems(prev => [newItem, ...prev].slice(0, 5));
-        socket.emit('upload-item', { roomCode, item: newItem });
-        setIsUploading(false);
-      };
-      reader.readAsDataURL(file);
+      uploadFile(files[0]);
     } else if (text) {
       const newItem: ClipboardItem = {
         id: Math.random().toString(36).substring(2, 9),
@@ -105,9 +112,26 @@ export default function Home() {
         content: text,
         timestamp: Date.now(),
       };
-      // Optimistic UI update
-      // setItems(prev => [newItem, ...prev].slice(0, 5));
       socket.emit('upload-item', { roomCode, item: newItem });
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      uploadFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -122,7 +146,26 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fffcf9] text-slate-900 font-sans selection:bg-orange-100" onPaste={handlePaste}>
+    <div
+      className="min-h-screen bg-[#fffcf9] dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-orange-100 dark:selection:bg-orange-900/50 relative"
+      onPaste={handlePaste}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag Overlay */}
+      {isDragging && (
+        <div className="fixed inset-0 z-50 pointer-events-none bg-orange-500/10 dark:bg-orange-500/20 backdrop-blur-sm border-4 border-dashed border-orange-500 flex items-center justify-center">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl flex flex-col items-center animate-in zoom-in-95 duration-200">
+            <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mb-6">
+              <ImageIcon size={40} className="text-orange-500" />
+            </div>
+            <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Drop Image Here</h3>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Release to instantly share to room {roomCode}</p>
+          </div>
+        </div>
+      )}
+
       {/* Background Decoration */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-orange-50 blur-[120px]" />
@@ -192,7 +235,7 @@ export default function Home() {
         </header>
 
         {/* Drop Zone */}
-        <div className="group relative mb-12">
+        <div className="group relative mb-12 cursor-pointer" onClick={() => document.getElementById('file-upload')?.click()}>
           <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-[2.5rem] blur opacity-10 group-hover:opacity-25 transition duration-500"></div>
           <div className="relative bg-white border-2 border-dashed border-orange-100 rounded-[2.2rem] p-12 md:p-16 flex flex-col items-center justify-center transition-all shadow-sm group-hover:border-orange-300">
             {isUploading ? (
@@ -205,12 +248,24 @@ export default function Home() {
                 <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-400 mb-4 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
                   <Clipboard size={28} />
                 </div>
-                <h2 className="text-xl font-bold text-slate-800">Paste or Drop</h2>
-                <p className="text-sm text-slate-400 font-medium text-center mt-2">
-                  Items sync instantly to Room <span className="text-orange-500 font-mono font-bold">{roomCode}</span>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 text-center">Paste, Drop, or Tap</h2>
+                <p className="text-sm text-slate-400 dark:text-slate-500 font-medium text-center mt-2 px-4">
+                  Images & text sync to Room <span className="text-orange-500 dark:text-orange-400 font-mono font-bold">{roomCode}</span>
                 </p>
               </>
             )}
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              accept="image/*"
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  uploadFile(e.target.files[0]);
+                  e.target.value = ''; // Reset input to allow same file upload again
+                }
+              }}
+            />
           </div>
         </div>
 
