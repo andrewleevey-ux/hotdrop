@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trash2, Copy, Image as ImageIcon, X, Loader2, Clipboard, Flame, LogIn } from 'lucide-react';
+import { Trash2, Copy, Image as ImageIcon, X, Loader2, Clipboard, Flame, LogIn, Send } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
 // I have added your Render URL here:
@@ -22,6 +22,7 @@ export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting, connected, disconnected
   const [isDragging, setIsDragging] = useState(false);
+  const [textInput, setTextInput] = useState('');
 
   // 1. Initialize Socket & Room on Load
   useEffect(() => {
@@ -139,6 +140,36 @@ export default function Home() {
     if (socket) socket.emit('delete-item', { roomCode, itemId: id });
   };
 
+  const handleTextSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!socket || connectionStatus !== 'connected' || !textInput.trim()) return;
+
+    const newItem: ClipboardItem = {
+      id: Math.random().toString(36).substring(2, 9),
+      type: 'text',
+      content: textInput.trim(),
+      timestamp: Date.now(),
+    };
+    socket.emit('upload-item', { roomCode, item: newItem });
+    setTextInput('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
+      e.preventDefault();
+      handleTextSubmit();
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // Optional: Could add a small toast notification here
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
   const clearAll = () => {
     if (socket && confirm('Clear history for everyone in this room?')) {
       socket.emit('clear-all', roomCode);
@@ -168,19 +199,19 @@ export default function Home() {
 
       {/* Background Decoration */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-orange-50 blur-[120px]" />
-        <div className="absolute top-[60%] -right-[5%] w-[30%] h-[30%] rounded-full bg-amber-50 blur-[100px]" />
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-orange-50 dark:bg-orange-500/10 blur-[120px]" />
+        <div className="absolute top-[60%] -right-[5%] w-[30%] h-[30%] rounded-full bg-amber-50 dark:bg-amber-500/10 blur-[100px]" />
       </div>
 
-      <div className="relative z-10 max-w-2xl mx-auto px-6 py-12">
+      <div className="relative z-10 max-w-lg mx-auto px-4 sm:px-6 py-12">
         {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 bg-white/60 backdrop-blur-md p-4 rounded-3xl border border-orange-100 shadow-sm">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md p-4 rounded-3xl border border-orange-100 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200">
+            <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200 dark:shadow-none">
               <Flame size={24} className="text-white fill-current" />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tight text-slate-800 uppercase">Hotdrop</h1>
+              <h1 className="text-xl font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase">Hotdrop</h1>
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'}`} />
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -190,54 +221,77 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Room Switcher */}
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-1.5 pl-4 shadow-sm">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Room:</span>
-            {isEditingRoom ? (
-              <form 
-                onSubmit={(e) => { e.preventDefault(); joinRoom(roomCode); }}
-                className="flex items-center"
-              >
-                <input 
-                  autoFocus
-                  type="text" 
-                  value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                  onBlur={() => joinRoom(roomCode)}
-                  className="w-20 font-mono font-bold text-slate-800 bg-transparent outline-none uppercase placeholder-slate-300"
-                  maxLength={6}
-                />
-              </form>
-            ) : (
+          <div className="flex items-center gap-2 justify-between sm:justify-end">
+            {/* Room Switcher */}
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 pl-4 shadow-sm flex-1 sm:flex-initial">
+              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Room:</span>
+              {isEditingRoom ? (
+                <form
+                  onSubmit={(e) => { e.preventDefault(); joinRoom(roomCode); }}
+                  className="flex items-center"
+                >
+                  <input
+                    autoFocus
+                    type="text"
+                    value={roomCode}
+                    onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                    onBlur={() => joinRoom(roomCode)}
+                    className="w-20 font-mono font-bold text-slate-800 dark:text-slate-200 bg-transparent outline-none uppercase placeholder-slate-300 dark:placeholder-slate-600"
+                    maxLength={6}
+                  />
+                </form>
+              ) : (
+                <button
+                  onClick={() => setIsEditingRoom(true)}
+                  className="font-mono font-bold text-slate-800 dark:text-slate-200 hover:text-orange-500 dark:hover:text-orange-400 transition-colors uppercase"
+                >
+                  {roomCode}
+                </button>
+              )}
               <button 
-                onClick={() => setIsEditingRoom(true)}
-                className="font-mono font-bold text-slate-800 hover:text-orange-500 transition-colors uppercase"
+                 onClick={() => setIsEditingRoom(!isEditingRoom)}
+                 className="p-2 bg-slate-50 dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 rounded-lg transition-colors"
+                 title="Join a different room"
               >
-                {roomCode}
+                <LogIn size={16} />
               </button>
-            )}
+            </div>
+
             <button 
-               onClick={() => setIsEditingRoom(!isEditingRoom)}
-               className="p-2 bg-slate-50 hover:bg-orange-50 text-slate-400 hover:text-orange-500 rounded-lg transition-colors"
-               title="Join a different room"
+              onClick={clearAll}
+              className="p-2.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
+              title="Clear All"
             >
-              <LogIn size={16} />
+              <Trash2 size={20} />
             </button>
           </div>
-
-          <button 
-            onClick={clearAll}
-            className="hidden md:flex p-2.5 text-slate-400 hover:text-red-500 hover:bg-white rounded-xl transition-all border border-transparent hover:border-red-100"
-            title="Clear All"
-          >
-            <Trash2 size={20} />
-          </button>
         </header>
 
+        {/* Text Input Area */}
+        <form onSubmit={handleTextSubmit} className="mb-6">
+          <div className="relative group">
+            <textarea
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type or paste text here to share... (Enter to send)"
+              className="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-3xl p-5 pr-14 min-h-[120px] resize-y text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-orange-200 dark:focus:border-orange-500/50 shadow-sm transition-all text-base leading-relaxed"
+            />
+            <button
+              type="submit"
+              disabled={!textInput.trim() || connectionStatus !== 'connected'}
+              className="absolute bottom-5 right-5 p-2 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white rounded-xl transition-colors disabled:cursor-not-allowed shadow-md shadow-orange-200 dark:shadow-none"
+              title="Send Text"
+            >
+              <Send size={18} />
+            </button>
+          </div>
+        </form>
+
         {/* Drop Zone */}
-        <div className="group relative mb-12 cursor-pointer" onClick={() => document.getElementById('file-upload')?.click()}>
-          <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-[2.5rem] blur opacity-10 group-hover:opacity-25 transition duration-500"></div>
-          <div className="relative bg-white border-2 border-dashed border-orange-100 rounded-[2.2rem] p-12 md:p-16 flex flex-col items-center justify-center transition-all shadow-sm group-hover:border-orange-300">
+        <div className="group relative mb-8 cursor-pointer" onClick={() => document.getElementById('file-upload')?.click()}>
+          <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-[2.5rem] blur opacity-10 dark:opacity-20 group-hover:opacity-25 transition duration-500"></div>
+          <div className="relative bg-white dark:bg-slate-900/50 border-2 border-dashed border-orange-100 dark:border-orange-500/30 rounded-[2.2rem] p-10 flex flex-col items-center justify-center transition-all shadow-sm group-hover:border-orange-300 dark:group-hover:border-orange-500/50">
             {isUploading ? (
               <div className="py-4 flex flex-col items-center">
                 <Loader2 className="animate-spin text-orange-500 mb-4" size={32} />
@@ -245,7 +299,7 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-400 mb-4 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                <div className="w-16 h-16 bg-orange-50 dark:bg-orange-500/10 rounded-2xl flex items-center justify-center text-orange-400 dark:text-orange-500 mb-4 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
                   <Clipboard size={28} />
                 </div>
                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 text-center">Paste, Drop, or Tap</h2>
@@ -277,26 +331,35 @@ export default function Home() {
           </div>
 
           {items.map((item) => (
-            <div key={item.id} className="group relative bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-3">
+            <div key={item.id} className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-3">
               <div className="flex items-start gap-4">
                 <div className="flex-1 min-w-0">
                   {item.type === 'text' ? (
-                    <p className="text-slate-600 text-[15px] leading-relaxed break-words whitespace-pre-wrap font-medium">{item.content}</p>
+                    <div className="relative">
+                      <p className="text-slate-600 dark:text-slate-300 text-[15px] leading-relaxed break-words whitespace-pre-wrap font-medium pr-10">{item.content}</p>
+                      <button
+                        onClick={() => copyToClipboard(item.content)}
+                        className="absolute top-0 right-0 p-1.5 text-slate-300 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-slate-800 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                        title="Copy to clipboard"
+                      >
+                        <Copy size={16} />
+                      </button>
+                    </div>
                   ) : (
-                    <div className="relative rounded-xl overflow-hidden border border-slate-50 bg-slate-50">
+                    <div className="relative rounded-xl overflow-hidden border border-slate-50 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
                       <img src={item.content} alt="Pasted" className="max-h-[400px] w-full object-contain" />
                     </div>
                   )}
                   <div className="mt-4 flex items-center gap-3">
-                    <span className="text-[9px] font-black text-slate-300 uppercase">
+                    <span className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase">
                       {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    <div className="h-[1px] flex-1 bg-slate-50" />
+                    <div className="h-[1px] flex-1 bg-slate-50 dark:bg-slate-800" />
                   </div>
                 </div>
                 <button 
                   onClick={() => deleteItem(item.id)}
-                  className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                  className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all ml-2"
                 >
                   <X size={18} />
                 </button>
@@ -305,8 +368,8 @@ export default function Home() {
           ))}
 
           {items.length === 0 && !isUploading && (
-            <div className="py-20 text-center border-2 border-dashed border-slate-50 rounded-[2rem] bg-white/30">
-              <p className="text-xs text-slate-300 font-bold uppercase tracking-widest italic">Waiting for your first drop...</p>
+            <div className="py-20 text-center border-2 border-dashed border-slate-50 dark:border-slate-800/50 rounded-[2rem] bg-white/30 dark:bg-slate-900/30">
+              <p className="text-xs text-slate-300 dark:text-slate-600 font-bold uppercase tracking-widest italic">Waiting for your first drop...</p>
             </div>
           )}
         </div>
