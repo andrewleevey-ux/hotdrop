@@ -27,8 +27,15 @@ export default function Home() {
 
   // 1. Initialize Socket & Room on Load
   useEffect(() => {
-    // Generate a random room code if one doesn't exist
-    const initialRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
+    // Check URL parameters for an auto-join room code
+    const params = new URLSearchParams(window.location.search);
+    const roomParam = params.get('room');
+
+    // Use the URL param if valid, otherwise generate a random one
+    const initialRoom = roomParam
+      ? roomParam.toUpperCase().trim()
+      : Math.random().toString(36).substring(2, 6).toUpperCase();
+
     setRoomCode(initialRoom);
 
     const newSocket = io(SOCKET_URL);
@@ -38,6 +45,11 @@ export default function Home() {
       setConnectionStatus('connected');
       console.log('Connected to Switchboard');
       newSocket.emit('join-room', initialRoom);
+
+      // Clean up the URL to prevent sharing the query param inadvertently
+      if (roomParam) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     });
 
     newSocket.on('init-history', (history: ClipboardItem[]) => {
@@ -177,7 +189,7 @@ export default function Home() {
     }
   };
 
-  const roomUrl = `https://hotdrop.boringapps.co.uk/${roomCode}`;
+  const roomUrl = `https://hotdrop.boringapps.co.uk/?room=${roomCode}`;
 
   return (
     <div
