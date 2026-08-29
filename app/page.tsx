@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trash2, Copy, Image as ImageIcon, X, Loader2, Clipboard, Flame, LogIn, Send } from 'lucide-react';
+import { Trash2, Copy, Image as ImageIcon, X, Loader2, Clipboard, Flame, LogIn, Send, ArchiveX, ClipboardPaste } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
 // I have added your Render URL here:
@@ -267,60 +267,71 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Text Input Area */}
-        <form onSubmit={handleTextSubmit} className="mb-6">
-          <div className="relative group">
+        {/* Unified Composer */}
+        <div className="mb-8 relative bg-white dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 rounded-3xl shadow-sm transition-all focus-within:border-orange-200 dark:focus-within:border-orange-500/50 group">
+          {isUploading && (
+            <div className="absolute inset-0 z-10 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center">
+              <Loader2 className="animate-spin text-orange-500 mb-2" size={24} />
+              <p className="text-xs font-bold text-orange-600 uppercase tracking-tighter">Syncing...</p>
+            </div>
+          )}
+          <form onSubmit={handleTextSubmit} className="flex flex-col relative z-0">
             <textarea
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type or paste text here to share... (Enter to send)"
-              className="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-3xl p-5 pr-14 min-h-[120px] resize-y text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-orange-200 dark:focus:border-orange-500/50 shadow-sm transition-all text-base leading-relaxed"
+              placeholder="Type, paste, or drop here to share... (Enter to send)"
+              className="w-full bg-transparent p-5 min-h-[120px] resize-y text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none text-base leading-relaxed"
             />
-            <button
-              type="submit"
-              disabled={!textInput.trim() || connectionStatus !== 'connected'}
-              className="absolute bottom-5 right-5 p-2 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white rounded-xl transition-colors disabled:cursor-not-allowed shadow-md shadow-orange-200 dark:shadow-none"
-              title="Send Text"
-            >
-              <Send size={18} />
-            </button>
-          </div>
-        </form>
-
-        {/* Drop Zone */}
-        <div className="group relative mb-8 cursor-pointer" onClick={() => document.getElementById('file-upload')?.click()}>
-          <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-[2.5rem] blur opacity-10 dark:opacity-20 group-hover:opacity-25 transition duration-500"></div>
-          <div className="relative bg-white dark:bg-slate-900/50 border-2 border-dashed border-orange-100 dark:border-orange-500/30 rounded-[2.2rem] p-10 flex flex-col items-center justify-center transition-all shadow-sm group-hover:border-orange-300 dark:group-hover:border-orange-500/50">
-            {isUploading ? (
-              <div className="py-4 flex flex-col items-center">
-                <Loader2 className="animate-spin text-orange-500 mb-4" size={32} />
-                <p className="text-sm font-bold text-orange-600 uppercase tracking-tighter">Syncing to Cloud...</p>
+            <div className="flex items-center justify-between p-3 border-t border-slate-50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/20 rounded-b-3xl">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                  className="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-slate-800 rounded-xl transition-colors flex items-center gap-2"
+                  title="Upload Image"
+                >
+                  <ImageIcon size={20} />
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const text = await navigator.clipboard.readText();
+                      setTextInput(prev => prev + text);
+                    } catch (e) {
+                      alert('Please use Ctrl+V or Cmd+V to paste');
+                    }
+                  }}
+                  className="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-slate-800 rounded-xl transition-colors flex items-center gap-2"
+                  title="Paste from Clipboard"
+                >
+                  <ClipboardPaste size={20} />
+                </button>
               </div>
-            ) : (
-              <>
-                <div className="w-16 h-16 bg-orange-50 dark:bg-orange-500/10 rounded-2xl flex items-center justify-center text-orange-400 dark:text-orange-500 mb-4 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
-                  <Clipboard size={28} />
-                </div>
-                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 text-center">Paste, Drop, or Tap</h2>
-                <p className="text-sm text-slate-400 dark:text-slate-500 font-medium text-center mt-2 px-4">
-                  Images & text sync to Room <span className="text-orange-500 dark:text-orange-400 font-mono font-bold">{roomCode}</span>
-                </p>
-              </>
-            )}
-            <input
-              type="file"
-              id="file-upload"
-              className="hidden"
-              accept="image/*"
-              onChange={(e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                  uploadFile(e.target.files[0]);
-                  e.target.value = ''; // Reset input to allow same file upload again
-                }
-              }}
-            />
-          </div>
+              <button
+                type="submit"
+                disabled={!textInput.trim() || connectionStatus !== 'connected'}
+                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white rounded-xl transition-colors disabled:cursor-not-allowed shadow-md shadow-orange-200 dark:shadow-none flex items-center gap-2 font-bold text-sm"
+                title="Send Text"
+              >
+                <span>Send</span>
+                <Send size={16} />
+              </button>
+            </div>
+          </form>
+          <input
+            type="file"
+            id="file-upload"
+            className="hidden"
+            accept="image/*"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                uploadFile(e.target.files[0]);
+                e.target.value = ''; // Reset input to allow same file upload again
+              }
+            }}
+          />
         </div>
 
         {/* List */}
@@ -331,7 +342,7 @@ export default function Home() {
           </div>
 
           {items.map((item) => (
-            <div key={item.id} className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-3">
+            <div key={item.id} className="group relative bg-white dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-3">
               <div className="flex items-start gap-4">
                 <div className="flex-1 min-w-0">
                   {item.type === 'text' ? (
@@ -368,8 +379,9 @@ export default function Home() {
           ))}
 
           {items.length === 0 && !isUploading && (
-            <div className="py-20 text-center border-2 border-dashed border-slate-50 dark:border-slate-800/50 rounded-[2rem] bg-white/30 dark:bg-slate-900/30">
-              <p className="text-xs text-slate-300 dark:text-slate-600 font-bold uppercase tracking-widest italic">Waiting for your first drop...</p>
+            <div className="py-16 flex flex-col items-center justify-center text-center">
+              <ArchiveX className="text-slate-200 dark:text-slate-800 mb-4" size={48} />
+              <p className="text-sm text-slate-400 dark:text-slate-500 font-medium">No drops in this room yet</p>
             </div>
           )}
         </div>
