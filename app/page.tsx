@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, Copy, Image as ImageIcon, X, Loader2, Clipboard, Flame, LogIn, Send, ArchiveX, ClipboardPaste } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import QRCode from 'react-qr-code';
 
 // I have added your Render URL here:
 const SOCKET_URL = 'https://hotdrop-backend.onrender.com';
@@ -176,6 +177,8 @@ export default function Home() {
     }
   };
 
+  const roomUrl = `https://hotdrop.boringapps.co.uk/${roomCode}`;
+
   return (
     <div
       className="min-h-screen bg-[#fffcf9] dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-orange-100 dark:selection:bg-orange-900/50 relative"
@@ -222,6 +225,9 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 justify-between sm:justify-end">
+            <div className="hidden sm:block p-2 bg-white rounded-lg shadow-sm">
+              <QRCode value={roomUrl} size={80} />
+            </div>
             {/* Room Switcher */}
             <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 pl-4 shadow-sm flex-1 sm:flex-initial">
               <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Room:</span>
