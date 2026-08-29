@@ -181,7 +181,7 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen bg-[#fffcf9] dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-orange-100 dark:selection:bg-orange-900/50 relative"
+      className="min-h-screen bg-[#fffcf9] dark:bg-[#0a0e17] text-slate-900 dark:text-slate-100 font-sans selection:bg-orange-100 dark:selection:bg-orange-900/50 relative"
       onPaste={handlePaste}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -200,12 +200,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Background Decoration */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-orange-50 dark:bg-orange-500/10 blur-[120px]" />
-        <div className="absolute top-[60%] -right-[5%] w-[30%] h-[30%] rounded-full bg-amber-50 dark:bg-amber-500/10 blur-[100px]" />
-      </div>
-
       <div className="relative z-10 max-w-md mx-auto px-4 sm:px-6 py-6">
         {/* Brand Header */}
         <div className="flex flex-col items-center justify-center py-6 mb-4">
@@ -222,19 +216,11 @@ export default function Home() {
 
           {/* Integrated Room Status Bar */}
           <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/50">
-            {/* Left: Status */}
-            <div className="flex items-center gap-2 pl-2">
-              <span className={`w-2 h-2 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                {connectionStatus === 'connected' ? 'Online' : 'Reconnecting...'}
-              </span>
-            </div>
-
-            {/* Right: Room Controls */}
+            {/* Left: Room Controls */}
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 pl-3 shadow-sm">
-                <div className="hidden sm:block items-center justify-center p-0.5 bg-white rounded mr-1">
-                  <QRCode value={roomUrl} size={24} />
+              <div className="flex items-center gap-2 pl-2">
+                <div className="hidden sm:block p-1.5 bg-white rounded-md mr-2">
+                  <QRCode value={roomUrl} size={64} />
                 </div>
                 <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Room:</span>
                 {isEditingRoom ? (
@@ -267,6 +253,16 @@ export default function Home() {
                 >
                   <LogIn size={16} />
                 </button>
+              </div>
+            </div>
+
+            {/* Right: Status and Clear */}
+            <div className="flex items-center gap-4 pr-2">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {connectionStatus === 'connected' ? 'Online' : 'Reconnecting...'}
+                </span>
               </div>
 
               <button 
