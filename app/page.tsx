@@ -206,75 +206,79 @@ export default function Home() {
         <div className="absolute top-[60%] -right-[5%] w-[30%] h-[30%] rounded-full bg-amber-50 dark:bg-amber-500/10 blur-[100px]" />
       </div>
 
-      <div className="relative z-10 max-w-lg mx-auto px-4 sm:px-6 py-12">
-        {/* Header */}
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md p-4 rounded-3xl border border-orange-100 dark:border-slate-800 shadow-sm">
+      <div className="relative z-10 max-w-md mx-auto px-4 sm:px-6 py-6">
+        {/* Brand Header */}
+        <div className="flex flex-col items-center justify-center py-6 mb-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200 dark:shadow-none">
               <Flame size={24} className="text-white fill-current" />
             </div>
-            <div>
-              <h1 className="text-xl font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase">Hotdrop</h1>
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {connectionStatus === 'connected' ? 'Online' : 'Reconnecting...'}
-                </span>
-              </div>
-            </div>
+            <h1 className="text-xl font-black tracking-tight text-slate-800 dark:text-slate-100 uppercase">Hotdrop</h1>
           </div>
-
-          <div className="flex items-center gap-2 justify-between sm:justify-end">
-            {/* Room Switcher */}
-            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 pl-4 shadow-sm flex-1 sm:flex-initial">
-              <div className="hidden sm:flex items-center justify-center p-1 bg-white rounded mr-1">
-                <QRCode value={roomUrl} size={32} />
-              </div>
-              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Room:</span>
-              {isEditingRoom ? (
-                <form
-                  onSubmit={(e) => { e.preventDefault(); joinRoom(roomCode); }}
-                  className="flex items-center"
-                >
-                  <input
-                    autoFocus
-                    type="text"
-                    value={roomCode}
-                    onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                    onBlur={() => joinRoom(roomCode)}
-                    className="w-20 font-mono font-bold text-slate-800 dark:text-slate-200 bg-transparent outline-none uppercase placeholder-slate-300 dark:placeholder-slate-600"
-                    maxLength={6}
-                  />
-                </form>
-              ) : (
-                <button
-                  onClick={() => setIsEditingRoom(true)}
-                  className="font-mono font-bold text-slate-800 dark:text-slate-200 hover:text-orange-500 dark:hover:text-orange-400 transition-colors uppercase"
-                >
-                  {roomCode}
-                </button>
-              )}
-              <button 
-                 onClick={() => setIsEditingRoom(!isEditingRoom)}
-                 className="p-2 bg-slate-50 dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 rounded-lg transition-colors"
-                 title="Join a different room"
-              >
-                <LogIn size={16} />
-              </button>
-            </div>
-
-            <button 
-              onClick={clearAll}
-              className="p-2.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
-              title="Clear All"
-            >
-              <Trash2 size={20} />
-            </button>
-          </div>
-        </header>
+        </div>
 
         {/* Unified Composer */}
-        <div className="mb-8 relative bg-white dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 rounded-3xl shadow-sm transition-all focus-within:border-orange-200 dark:focus-within:border-orange-500/50 group">
+        <div className="mb-8 relative bg-white dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 rounded-3xl shadow-sm transition-all focus-within:border-orange-200 dark:focus-within:border-orange-500/50 group overflow-hidden">
+
+          {/* Integrated Room Status Bar */}
+          <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/50">
+            {/* Left: Status */}
+            <div className="flex items-center gap-2 pl-2">
+              <span className={`w-2 h-2 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                {connectionStatus === 'connected' ? 'Online' : 'Reconnecting...'}
+              </span>
+            </div>
+
+            {/* Right: Room Controls */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 pl-3 shadow-sm">
+                <div className="hidden sm:block items-center justify-center p-0.5 bg-white rounded mr-1">
+                  <QRCode value={roomUrl} size={24} />
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Room:</span>
+                {isEditingRoom ? (
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); joinRoom(roomCode); }}
+                    className="flex items-center"
+                  >
+                    <input
+                      autoFocus
+                      type="text"
+                      value={roomCode}
+                      onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                      onBlur={() => joinRoom(roomCode)}
+                      className="w-16 font-mono text-sm font-bold text-slate-800 dark:text-slate-200 bg-transparent outline-none uppercase placeholder-slate-300 dark:placeholder-slate-600"
+                      maxLength={6}
+                    />
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => setIsEditingRoom(true)}
+                    className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 hover:text-orange-500 dark:hover:text-orange-400 transition-colors uppercase"
+                  >
+                    {roomCode}
+                  </button>
+                )}
+                <button
+                   onClick={() => setIsEditingRoom(!isEditingRoom)}
+                   className="p-1 text-slate-400 hover:text-slate-200 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+                   title="Join a different room"
+                >
+                  <LogIn size={16} />
+                </button>
+              </div>
+
+              <button 
+                onClick={clearAll}
+                className="p-2 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                title="Clear All"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+
           {isUploading && (
             <div className="absolute inset-0 z-10 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center">
               <Loader2 className="animate-spin text-orange-500 mb-2" size={24} />
