@@ -13,3 +13,4 @@ Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
   Why you should do it regularly: https://github.com/browserslist/update-db#readme
 ○ Compiling / ...
  GET / 200 in 7.3s (compile: 6.9s, render: 418ms)
+ GET / 200 in 350ms (compile: 152ms, render: 198ms)

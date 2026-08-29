@@ -225,11 +225,11 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 justify-between sm:justify-end">
-            <div className="hidden sm:block p-2 bg-white rounded-lg shadow-sm">
-              <QRCode value={roomUrl} size={80} />
-            </div>
             {/* Room Switcher */}
             <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 pl-4 shadow-sm flex-1 sm:flex-initial">
+              <div className="hidden sm:flex items-center justify-center p-1 bg-white rounded mr-1">
+                <QRCode value={roomUrl} size={32} />
+              </div>
               <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Room:</span>
               {isEditingRoom ? (
                 <form
