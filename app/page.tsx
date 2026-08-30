@@ -246,7 +246,7 @@ export default function Home() {
                     ) : (
                       <button
                         onClick={() => setIsEditingRoom(true)}
-                        className="font-mono text-base font-bold text-slate-800 dark:text-white hover:text-orange-500 dark:hover:text-orange-400 transition-colors uppercase"
+                        className="font-mono text-3xl font-bold text-orange-500 transition-colors uppercase"
                       >
                         {roomCode}
                       </button>
