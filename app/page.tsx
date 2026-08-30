@@ -27,8 +27,11 @@ export default function Home() {
 
   // 1. Initialize Socket & Room on Load
   useEffect(() => {
-    // Generate a random room code if one doesn't exist
-    const initialRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
+    // Generate a random room code if one doesn't exist in the URL
+    const params = new URLSearchParams(window.location.search);
+    const urlRoom = params.get('room');
+    const initialRoom = urlRoom ? urlRoom.toUpperCase() : Math.random().toString(36).substring(2, 6).toUpperCase();
+
     setRoomCode(initialRoom);
 
     const newSocket = io(SOCKET_URL);
@@ -177,7 +180,7 @@ export default function Home() {
     }
   };
 
-  const roomUrl = `https://hotdrop.boringapps.co.uk/${roomCode}`;
+  const roomUrl = `https://hotdrop.boringapps.co.uk/?room=${roomCode}`;
 
   return (
     <div
