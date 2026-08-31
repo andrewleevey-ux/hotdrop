@@ -239,14 +239,14 @@ export default function Home() {
                           value={roomCode}
                           onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                           onBlur={() => joinRoom(roomCode)}
-                          className="w-16 font-mono text-base font-bold text-slate-800 dark:text-white bg-transparent outline-none uppercase placeholder-slate-300 dark:placeholder-slate-600"
+                          className="w-32 font-mono text-3xl font-bold text-orange-500 bg-transparent outline-none uppercase placeholder-slate-300 dark:placeholder-slate-600"
                           maxLength={6}
                         />
                       </form>
                     ) : (
                       <button
                         onClick={() => setIsEditingRoom(true)}
-                        className="font-mono text-base font-bold text-slate-800 dark:text-white hover:text-orange-500 dark:hover:text-orange-400 transition-colors uppercase"
+                        className="font-mono text-3xl font-bold text-orange-500 transition-colors uppercase"
                       >
                         {roomCode}
                       </button>
